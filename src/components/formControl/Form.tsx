@@ -12,17 +12,15 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Input as SInput } from "@/components/ui/input";
 import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
 import {
   Select,
   SelectContent,
@@ -31,65 +29,93 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { useState, useCallback } from "react";
-import JsZip, { JSZipObject} from "jszip";
-import { useForm ,Controller } from "react-hook-form";
+import { Progress } from "@/components/ui/progress";
+
+import { useState, useCallback, useRef } from "react";
+import JsZip from "jszip";
+import { useForm, Controller } from "react-hook-form";
+import { FileUpload, fileUploadSchema } from "@/lib/zod.utils";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import axios from "axios";
 
 const Form = () => {
   const [fileList, setFileList] = useState<FileList | null>(null);
   const [list, setList] = useState<any | null>(null);
-  const [data, setData] = useState<any>(null);
+  const [progressLoad, setProgressLoad] = useState<number>(0);
 
-  const form = useForm();
+  const fileRef = useRef<any>(null);
 
-  const onSubmit = useCallback(async (body: any) => {
-    try {
-      const { type, username } = body;
+  const form = useForm<FileUpload>({
+    resolver: zodResolver(fileUploadSchema),
+  });
 
-      // console.log('file' ,file)
-     
-      if (!fileList) {
-        console.log("Please upload batch file");
-        return;
-      }
-      const formData = new FormData();
-      formData.append("file", fileList[0]);
-      formData.append("username", username);
-      formData.append("type", type);
-      formData.append('list', JSON.stringify(list))
-      // console.log(list)
+  const handleFileChange = async (e: any): Promise<void> => {
+    setProgressLoad(0);
+    const fileLists = e.target.files;
+    console.log(fileLists[0]);
 
-      console.log([...formData.entries()]);
-
-      const res = await axios.post("http://localhost:7000/import-file", formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      console.log(res);
-
-    } catch (e) {
-      console.log(e);
-    }
-  }, []);
-
-  const handleFileChange = async (e: any) => {
-    const fileList = e.target.files;
-    console.log(fileList)
-
-    
     const zip = new JsZip();
-    const decomposedFile = await zip.loadAsync(fileList[0]);
-    
-    const files = decomposedFile.files;
-    
+    const decomposedFile = await zip.loadAsync(fileLists[0]);
 
-    setFileList(fileList);
-    setList(files)
+    const files = decomposedFile.files;
+
+    // if(!fileLists[0]){
+    //   return
+    // }
+    setFileList(fileLists);
+    setList(files);
   };
+
+  const onSubmit = useCallback(
+    async (body: any) => {
+      try {
+        const { type, username } = body;
+
+        if (fileList && fileList[0]) {
+          const formData = new FormData();
+          formData.append("file", fileList[0] || null);
+          formData.append("username", username);
+          formData.append("type", type);
+          formData.append("list", JSON.stringify(list));
+
+          // console.log(list)
+          console.log([...formData.entries()]);
+
+          const res = await axios.post(
+            "http://localhost:8000/import-file",
+            formData,
+            {
+              headers: {
+                "Content-Type": "multipart/form-data",
+              },
+              onUploadProgress: (progressEvent: any) => {
+                setProgressLoad(progressEvent?.progress * 100);
+              },
+            }
+          );
+
+          console.log(res);
+        }
+      } catch (e) {
+        console.log(e);
+      } finally {
+        form.reset();
+        console.log("finally");
+        form.setValue("type",'A')
+        fileRef.current.value = null;
+
+        setFileList(null)
+        setList(null)
+
+        const myTimeout = setTimeout(() => setProgressLoad(0), 2000);
+        return () => {
+          clearTimeout(myTimeout);
+        };
+      }
+    },
+    [fileList]
+  );
 
   const router = useRouter();
   return (
@@ -109,8 +135,12 @@ const Form = () => {
                   <FormItem>
                     <FormLabel>Type</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                      }}
+                      defaultValue={"A"}
+                      value={field.value}
+                 
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -144,35 +174,45 @@ const Form = () => {
                     <FormDescription>
                       This is your public display name.
                     </FormDescription>
-                    <FormMessage />
                   </FormItem>
                 </>
               )}
             />
-         <Controller
-        name="file"
-        control={form.control}
-        render={({ field }) => (
-          <>
-            <FormItem>
-              <FormLabel>Upload</FormLabel>
-              <FormControl>
-                <Input
-                  type="file"
-                  {...field}
-                  onChange={(e) => 
-                    handleFileChange(e)
-                 
-                    // field.onChange(e.target.files)
-                  }
-                />
-              </FormControl>
-              {/* Display file name if available */}
-              {field.value && <p>Selected File: {field.value.name}</p>}
-            </FormItem>
-          </>
-        )}
-      />
+            <Controller
+              name="fileUpload"
+              control={form.control}
+              render={({ field }) => (
+                <>
+                  <FormItem>
+                    <FormLabel>Upload</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="file"
+                        {...field}
+                        ref={fileRef}
+                        defaultValue={undefined}
+                        onChange={(e) => {
+                          handleFileChange(e);
+                          field.value = e.target.files;
+                        }}
+                      />
+                    </FormControl>
+                    {/* Display file name if available */}
+                    {field.value && (
+                      <p className=" text-xs">Selected File: {field.value}</p>
+                    )}
+
+                    {/* {console.log(field.value)} */}
+
+                    <Progress
+                      max={100}
+                      value={progressLoad}
+                      className=" mt-2 w-full"
+                    />
+                  </FormItem>
+                </>
+              )}
+            />
 
             <Button type="submit" className=" mt-5">
               Submit

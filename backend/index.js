@@ -4,13 +4,20 @@ const app = express();
 import cors from "cors";
 import multer from "multer";
 
-const PORT = 7000;
+const PORT = 8000;
 
 const importUpload = multer({
   storage: multer.memoryStorage(),
   limits: {
     fileSize: 104857600, // max 5 MB
   },
+  fileFilter: (req, file,cb) =>{
+    if(file.mimetype === 'application/x-zip-compressed'){
+      cb(null, true);
+    }else {
+      cb(new Error('not allow other files with out application/x-zip-compressed'),false);
+    }
+  }
 });
 
 app.use(cors());
@@ -43,6 +50,8 @@ app.post("/import-file", importUpload.single("file"), (req, res) => {
   console.log("Type:", type);
   console.log("List:", JSON.parse(list));
 
+  const lists = JSON.parse(list)
+
   //   console.log(req.body);
 
   console.log("file name ==>", originalname);
@@ -53,6 +62,7 @@ app.post("/import-file", importUpload.single("file"), (req, res) => {
     username,
     type,
     originalname,
+    lists
   });
 });
 

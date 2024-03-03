@@ -39,10 +39,16 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import axios from "axios";
 
+interface responseUpload  {
+  message: string
+}
+
 const Form = () => {
   const [fileList, setFileList] = useState<FileList | null>(null);
   const [list, setList] = useState<any | null>(null);
   const [progressLoad, setProgressLoad] = useState<number>(0);
+  const [showProgress, setShowProgress] = useState<boolean>(false);
+  const [data , setData] = useState<responseUpload | null>(null)
 
   const fileRef = useRef<any>(null);
 
@@ -71,6 +77,7 @@ const Form = () => {
     async (body: any) => {
       try {
         const { type, username } = body;
+        setData(null)
 
         if (fileList && fileList[0]) {
           const formData = new FormData();
@@ -81,6 +88,7 @@ const Form = () => {
 
           // console.log(list)
           console.log([...formData.entries()]);
+          setShowProgress(true)
 
           const res = await axios.post(
             "http://localhost:8000/import-file",
@@ -94,6 +102,9 @@ const Form = () => {
               },
             }
           );
+          const data = await res.data
+
+          setData(data)
 
           console.log(res);
         }
@@ -102,16 +113,21 @@ const Form = () => {
       } finally {
         form.reset();
         console.log("finally");
-        form.setValue("type",'A')
+        form.setValue("type", "A");
         fileRef.current.value = null;
 
-        setFileList(null)
-        setList(null)
-
-        const myTimeout = setTimeout(() => setProgressLoad(0), 2000);
+        setFileList(null);
+        setList(null);
+       
+        const myTimeout = setTimeout(() => {
+          alert(data?.message)
+          setProgressLoad(0)
+          setShowProgress(false)
+        }, 1000);
         return () => {
           clearTimeout(myTimeout);
         };
+        
       }
     },
     [fileList]
@@ -121,7 +137,7 @@ const Form = () => {
   return (
     <Card className="w-[350px] dark:bg-gray500">
       <CardHeader>
-        <CardTitle>Create product</CardTitle>
+        <CardTitle>Information</CardTitle>
         <CardDescription>Add your new product in one-click.</CardDescription>
       </CardHeader>
       <CardContent>
@@ -140,7 +156,6 @@ const Form = () => {
                       }}
                       defaultValue={"A"}
                       value={field.value}
-                 
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -198,17 +213,18 @@ const Form = () => {
                       />
                     </FormControl>
                     {/* Display file name if available */}
-                    {field.value && (
-                      <p className=" text-xs">Selected File: {field.value}</p>
+                    {fileRef.current?.value && (
+                      <>
+                        <p className=" text-xs">
+                          Selected File: {fileRef.current.value}
+                        </p>
+                      </>
+                    )}
+                    {showProgress && (
+                      <Progress max={100} value={progressLoad} className=" mt-2 w-full"/>
                     )}
 
                     {/* {console.log(field.value)} */}
-
-                    <Progress
-                      max={100}
-                      value={progressLoad}
-                      className=" mt-2 w-full"
-                    />
                   </FormItem>
                 </>
               )}

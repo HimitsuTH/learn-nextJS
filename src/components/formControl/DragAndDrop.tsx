@@ -9,44 +9,56 @@ import JsZip from "jszip";
 import TableInformation from "../table/Index";
 import { csvStringToArray } from "@/lib/csv.utils";
 
-
 export default function DragAndDrop() {
   const [dragActive, setDragActive] = useState<boolean>(false);
   const inputRef = useRef<any>(null);
   const [files, setFiles] = useState<any>(null);
   const [fileImport, setFileImport] = useState<any>({});
 
-  const getFileZip = async (file: FileList) => {
+  const getFileZip = async (file: FileList, type?: 'default' | string) => {
     const zip = new JsZip();
     const decomposedFile = await zip.loadAsync(file[0]);
 
-    const fileList = decomposedFile.files;
-    const documentString = await decomposedFile.file('document.csv')?.async('string')
-    const traderString = await decomposedFile.file('trader.csv')?.async('string')
-    const productString = await decomposedFile.file('product.csv')?.async('string')
+    console.log(file[0])
 
-    if(!documentString){
-      return console.log("document error")
+    const fileList = decomposedFile.files;
+
+
+    const documentString = await decomposedFile
+      .file("document.csv")
+      ?.async("string");
+    const traderString = await decomposedFile
+      .file("trader.csv")
+      ?.async("string");
+    const productString = await decomposedFile
+      .file("product.csv")
+      ?.async("string");
+
+    if (!documentString) {
+      return console.log("document error");
     }
 
-    const document = await csvStringToArray(documentString) 
-    const trader = traderString ? await csvStringToArray(traderString) : []
-    const product = productString ? await csvStringToArray(productString) : []
+    const document = await csvStringToArray(documentString);
+    const trader = traderString ? await csvStringToArray(traderString) : [];
+    const product = productString ? await csvStringToArray(productString) : [];
 
     setFileImport({
       document,
       trader,
-      product
+      product,
     });
+
+    if(type === 'selected') setFiles({...fileList,name: file[0].name})
   };
 
   const handleChange = async (e: any) => {
     e.preventDefault();
     const fileLists = e.target.files;
 
-    await getFileZip(fileLists);
+    await getFileZip(fileLists, 'selected');
 
     console.log("File has been added");
+
     if (!files || !files.length) return null;
 
     if (files[0] && files[0].size >= 2e8) {
@@ -54,15 +66,16 @@ export default function DragAndDrop() {
       console.log("Please upload a file size not over 200 MB");
     }
 
-    setFiles(files[0]);
     setDragActive(false);
   };
 
   console.log(fileImport);
 
   async function handleSubmitFile(e: any) {
+    console.log(files)
     if (files.length !== 0) {
       const formData = new FormData();
+
 
       formData.append("file", files);
 
@@ -119,6 +132,7 @@ export default function DragAndDrop() {
   function removeFile() {
     setFiles(null);
     setDragActive(false);
+    setFileImport({});
   }
 
   function openFileExplorer() {
@@ -126,29 +140,28 @@ export default function DragAndDrop() {
     inputRef.current.click();
   }
 
-
-  const tableHeader  = [
+  const tableHeader = [
     {
-      field: 'no',
-      headerName: 'No.',
-      styles: 'w-[100px] text-center'
+      field: "no",
+      headerName: "No.",
+      styles: "w-[100px] text-center",
     },
     {
-      field: 'operationFlag',
-      headerName: 'Operation Flag',
-      styles: 'text-center'
+      field: "operationFlag",
+      headerName: "Operation Flag",
+      styles: "text-center",
     },
     {
-      field: 'billNo',
-      headerName: 'Bill no',
-      styles: 'text-center'
+      field: "billNo",
+      headerName: "Bill no",
+      styles: "text-center",
     },
     {
-      field: 'amount',
-      headerName: 'Grand total amount',
-      styles: ' text-right'
+      field: "amount",
+      headerName: "Grand total amount",
+      styles: " text-right",
     },
-  ]
+  ];
 
   return (
     <div className="flex items-center justify-center h-[50vh] flex-col w-full">
@@ -189,10 +202,11 @@ export default function DragAndDrop() {
       </form>
 
       {files ? (
-        <div className=" w-full md:w-5/6 p-10 dark:bg-gray ">
+        <div className=" h-full relative flex flex-col items-center">
           <ItemUpload file={files} removeFile={removeFile} />
-
-          <TableInformation data={fileImport} tableHeader={tableHeader} />
+          <div className=" h-full overflow-y-scroll">
+            <TableInformation data={fileImport} tableHeader={tableHeader} />
+          </div>
 
           <Button
             className=" bg-black rounded-lg p-2 mt-3  dark:bg-white "

@@ -11,13 +11,19 @@ const importUpload = multer({
   limits: {
     fileSize: 104857600, // max 5 MB
   },
-  fileFilter: (req, file,cb) =>{
-    if(file.mimetype === 'application/x-zip-compressed'){
-      cb(null, true);
-    }else {
-      cb(new Error('not allow other files with out application/x-zip-compressed'),false);
-    }
-  }
+  // fileFilter: (req, file, cb) => {
+  //   console.log(file.mimetype)
+  //   if (file.mimetype === "application/x-zip-compressed") {
+  //     cb(null, true);
+  //   } else {
+  //     cb(
+  //       new Error(
+  //         "not allow other files with out application/x-zip-compressed"
+  //       ),
+  //       false
+  //     );
+  //   }
+  // },
 });
 
 app.use(cors());
@@ -29,41 +35,45 @@ app.get("/", (req, res) => {
 });
 
 app.post("/import-file", importUpload.single("file"), (req, res) => {
-  // Access the file using req.file
+  try {
+    // Access the file using req.file
 
-  const file = req.file;
+    const file = req.file;
 
-  const originalname = (file.originalname = Buffer.from(
-    file.originalname,
-    "latin1"
-  ).toString("utf8"));
+    const originalname = (file.originalname = Buffer.from(
+      file.originalname,
+      "latin1"
+    ).toString("utf8"));
 
-  // Access other form fields from req.body
-  //   const username = req.body.username;
-  //   const type = req.body.type;
+    // Access other form fields from req.body
+    //   const username = req.body.username;
+    //   const type = req.body.type;
 
-  const { username, type, list } = req.body;
+    const { username, type, list } = req.body;
 
-  // Log or process the data
-  console.log("File:", file);
-  console.log("Username:", username);
-  console.log("Type:", type);
-  console.log("List:", JSON.parse(list));
+    // Log or process the data
+    console.log("File:", file);
+    console.log("Username:", username);
+    console.log("Type:", type);
+    console.log("List:", JSON.parse(list));
 
-  const lists = JSON.parse(list)
+    const lists = JSON.parse(list);
 
-  //   console.log(req.body);
+    //   console.log(req.body);
 
-  console.log("file name ==>", originalname);
+    console.log("file name ==>", originalname);
 
-  // Send a response
-  res.json({
-    message: "File uploaded successfully!",
-    username,
-    type,
-    originalname,
-    lists
-  });
+    // Send a response
+    res.json({
+      message: "File uploaded successfully!",
+      username,
+      type,
+      originalname,
+      lists,
+    });
+  } catch (err) {
+    console.log(err);
+  }
 });
 
 app.post("/upload-file", importUpload.single("file"), (req, res) => {
@@ -71,18 +81,20 @@ app.post("/upload-file", importUpload.single("file"), (req, res) => {
 
   const file = req.file;
 
-  const originalname = (file.originalname = Buffer.from(
-    file.originalname,
-    "latin1"
-  ).toString("utf8"));
+  console.log(file);
 
-  console.log("file name ==>", originalname);
+  // const originalname = (file.originalname = Buffer.from(
+  //   file.originalname,
+  //   "latin1"
+  // ).toString("utf8"));
 
-  // Send a response
-  res.json({
-    message: "File uploaded successfully!",
-    originalname,
-  });
+  // console.log("file name ==>", originalname);
+
+  // // Send a response
+  // res.json({
+  //   message: "File uploaded successfully!",
+  //   originalname,
+  // });
 });
 
 app.listen(PORT, () => {

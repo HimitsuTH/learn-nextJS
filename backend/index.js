@@ -81,20 +81,20 @@ app.post("/upload-file", importUpload.single("file"), (req, res) => {
 
   const file = req.file;
 
-  console.log(file);
+  console.log({file});
 
-  // const originalname = (file.originalname = Buffer.from(
-  //   file.originalname,
-  //   "latin1"
-  // ).toString("utf8"));
+  const originalname = (file.originalname = Buffer.from(
+    file.originalname,
+    "latin1"
+  ).toString("utf8"));
 
-  // console.log("file name ==>", originalname);
+  console.log("file name ==>", originalname);
 
-  // // Send a response
-  // res.json({
-  //   message: "File uploaded successfully!",
-  //   originalname,
-  // });
+  // Send a response
+  res.json({
+    message: "File uploaded successfully!",
+    originalname,
+  });
 });
 
 app.listen(PORT, () => {

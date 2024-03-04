@@ -17,11 +17,11 @@ export default function DragAndDrop() {
 
   const getFileZip = async (file: FileList, type?: 'default' | string) => {
     const zip = new JsZip();
+
+    // unzip file
     const decomposedFile = await zip.loadAsync(file[0]);
 
-    console.log(file[0])
-
-    const fileList = decomposedFile.files;
+    // const fileList = decomposedFile.files;
 
 
     const documentString = await decomposedFile
@@ -34,25 +34,28 @@ export default function DragAndDrop() {
       .file("product.csv")
       ?.async("string");
 
-    if (!documentString) {
-      return console.log("document error");
-    }
-
-    const document = await csvStringToArray(documentString);
-    const trader = traderString ? await csvStringToArray(traderString) : [];
-    const product = productString ? await csvStringToArray(productString) : [];
-
+      
+      if (!documentString) {
+        return console.log("document error");
+      }
+      
+      const document = await csvStringToArray(documentString);
+      const trader = traderString ? await csvStringToArray(traderString) : [];
+      const product = productString ? await csvStringToArray(productString) : [];
+      
     setFileImport({
       document,
       trader,
       product,
     });
 
-    if(type === 'selected') setFiles({...fileList,name: file[0].name})
+    if(type === 'selected') setFiles(file[0])
   };
-
+  
   const handleChange = async (e: any) => {
     e.preventDefault();
+
+    // get file on select
     const fileLists = e.target.files;
 
     await getFileZip(fileLists, 'selected');
@@ -69,13 +72,11 @@ export default function DragAndDrop() {
     setDragActive(false);
   };
 
-  console.log(fileImport);
-
   async function handleSubmitFile(e: any) {
-    console.log(files)
+
     if (files.length !== 0) {
       const formData = new FormData();
-
+      
 
       formData.append("file", files);
 
